@@ -1940,9 +1940,9 @@ def _scatter_lower(ctx, operand, indices, updates, *,
     index_vector_dim=len(ctx.avals_in[1].shape) - 1)
   op = mhlo.ScatterOp(
       mlir.aval_to_ir_type(aval_out),
-      operand,
+      [operand],
       indices,
-      updates,
+      [updates],
       scatter_dnums,
       indices_are_sorted=ir.BoolAttr.get(indices_are_sorted),
       unique_indices=ir.BoolAttr.get(unique_indices))
@@ -1996,11 +1996,17 @@ def _scatter_add_lower_gpu(ctx, operand, indices, updates,
       core.ShapedArray(aval_out.shape, real_dtype))
 
   def _scatter(operand_part, updates_part):
+    # If the MLIR api support variadic scatter, we make a variadic scatter op
+    # with arity 1
+    if jax._src.lib.mlir_api_version >= 20:
+      operand_part = [operand_part]
+      updates_part = [updates_part]
+
     scatter = mhlo.ScatterOp(
         operand_type_part,
-        operand_part,
+        [operand_part],
         indices,
-        updates_part,
+        [updates_part],
         scatter_dnums,
         indices_are_sorted=ir.BoolAttr.get(indices_are_sorted),
         unique_indices=ir.BoolAttr.get(unique_indices))
